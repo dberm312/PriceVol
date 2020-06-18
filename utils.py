@@ -13,9 +13,10 @@ def makePort(labels):
     -------
     Pandas DataFrame of potential Portfolios.
     '''
-    out = pd.DataFrame(np.linspace(0,1,26),index=np.zeros(26),columns = [labels[0]])
+    n=11
+    out = pd.DataFrame(np.linspace(0,1,n),index=np.zeros(n),columns = [labels[0]])
     for i in labels[1:]:
-        out = out.join(pd.DataFrame(np.linspace(0,1,26),index=np.zeros(26),columns = [i]))
+        out = out.join(pd.DataFrame(np.linspace(0,1,n),index=np.zeros(n),columns = [i]))
     out = ((out.T/out.T.sum()).T).applymap(lambda x:np.round(x,3)).drop_duplicates().dropna()
     out.index = range(out.shape[0])
     return(out)
@@ -68,3 +69,32 @@ class Portfolio:
         df['return'] = rs
         df['vol'] = vs
         self.df = df
+    def sharpe(self,rf):
+        '''
+        Parameters
+        ----------
+        rf : float
+            Risk Free Intrest Rate.
+
+        Returns
+        -------
+        Adds Sharp Ratio Column in DataFrame.
+
+        '''
+        self.rf = rf
+        self.df['sharpe'] = (self.df['return']-rf)/(self.df['vol'])
+    
+    def components(self):
+        temp = self.df[self.df[['corn','soyb','weat']].isin([1]).sum(1).astype(bool)]
+        temp.index = temp[['corn','soyb','weat']].idxmax(1)
+        temp = temp[['return','vol']]
+        return(temp)
+    
+    def stats(self):
+        maxreturn = pd.DataFrame(self.df.loc[self.df['return'].idxmax()])
+        maxreturn.columns = ['maxreturn']
+        minvol = pd.DataFrame(self.df.loc[self.df['vol'].idxmin()])
+        minvol.columns = ['minvol']
+        maxsharpe = pd.DataFrame(self.df.loc[self.df['sharpe'].idxmax()])
+        maxsharpe.columns = ['maxsharpe']
+        return(maxreturn.join(minvol).join(maxsharpe))
